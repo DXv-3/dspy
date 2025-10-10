@@ -21,12 +21,45 @@ Establish dashboards for both product owners and SRE stakeholders:
 - **Agent quality dashboards**: Break down metrics by agent signature, optimizer version, and evaluation set. Highlight drift using rolling evaluation scores and number of guardrail overrides.
 - **Operational health dashboards**: Display LM provider latency, rate-limit utilization, queue depth, and cost-per-call. Combine these with infrastructure metrics from Kubernetes/VM orchestrators for unified response plans.
 
-Feed dashboards with second-level granularity via stream processing. Favor materialized views in warehouses like Snowflake or BigQuery for historical slices, while Grafana and Metabase consume both streaming topics and warehouse tables for flexible querying.
+Feed dashboards with second-level granularity via stream processing. Favor materialized views in warehouses like Snowflake or BigQuery for historical slices, while Grafana and Metabase consume both streaming topics and warehouse tables for flexible querying. Version-control dashboard definitions alongside code releases so stakeholders can preview updates, and run them through the same pull-request reviews as DSPy program changes.
 
 ## Telemetry Pipelines
 
 1. **Instrument DSPy programs** with `dspy.tracing` hooks or custom middleware that emits OTel spans for each module, optimizer, and tool call. Annotate spans with inputs, outputs, latency, and quality metadata (scores, guardrail verdicts) using OTel attributes.
-2. **Collect traces** via the OTel Collector. Configure receivers for HTTP/gRPC exporters in your DSPy services and enable tail-based sampling to retain low-latency anomalies while downsampling high-volume success traces.
+2. **Collect traces** via the OTel Collector. Configure receivers for HTTP/gRPC exporters in your DSPy services and enable tail-based sampling to retain low-latency anomalies while downsampling high-volume success traces. A representative collector configuration is shown below:
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+processors:
+  tail_sampling:
+    policies:
+      - name: guardrail-hot-path
+        latency:
+          threshold_ms: 250
+      - name: errors
+        status_code:
+          status_codes: [ERROR]
+  attributes:
+    actions:
+      - key: customer_tier
+        action: upsert
+        value: ${CUSTOMER_TIER}
+exporters:
+  otlphttp/warehouse:
+    endpoint: https://collector.internal/events
+  kafka/telemetry:
+    brokers: ["kafka-1:9092", "kafka-2:9092"]
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [tail_sampling, attributes]
+      exporters: [otlphttp/warehouse, kafka/telemetry]
+```
 3. **Enrich events** inside stream processors. Attach business metadata (customer tiers, SLA tiers) and enforce PII scrubbing before persisting to long-term storage.
 4. **Persist telemetry** into durable stores. Use a columnar warehouse for analytics (Snowflake/BigQuery), a time-series database for high-resolution metrics (Prometheus, InfluxDB), and an object store for raw trace archives.
 
@@ -35,6 +68,29 @@ Feed dashboards with second-level granularity via stream processing. Favor mater
 - **Grafana**: Connect to Prometheus or Loki for live metrics/logs. Build templated dashboards grouped by agent, optimizer, and deployment stage. Add panels for anomaly detection outputs from streaming jobs.
 - **Metabase**: Empower product analysts with self-serve SQL queries on warehouse tables that join telemetry with product usage and billing data. Publish curated collections (e.g., “Agent Adoption”, “Governance Exceptions”) and schedule email/slack pulses.
 - **Shared components**: Define a common filter set (time range, agent, customer, deployment stage) so that Grafana, Metabase, and custom BI surfaces stay consistent. Maintain version-controlled dashboard JSON and embed reviews in release cycles.
+
+```json
+{
+  "dashboard": "Agent Health Overview",
+  "templating": {
+    "list": [
+      { "name": "agent", "query": "label_values(agent_name)", "type": "query" },
+      { "name": "environment", "query": "[staging,production]", "type": "custom" }
+    ]
+  },
+  "panels": [
+    {
+      "title": "Latency (p95)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(agent_latency_bucket{agent=~'$agent', environment=~'$environment'}[5m])) by (le))"
+        }
+      ]
+    }
+  ]
+}
+```
 
 ## MLflow Tracing and Experimentation
 
