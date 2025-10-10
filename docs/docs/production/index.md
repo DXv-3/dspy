@@ -18,6 +18,14 @@
 
     [:octicons-arrow-right-24: Set Up Observability](../tutorials/observability/#tracing)
 
+- :material-chart-box-outline:{ .lg .middle } __Deep Integration, Analytics, and Governance__
+
+    ---
+
+    Blueprint a production estate that unifies dashboards, telemetry, MLflow Tracing, and governance workflows for every agent.
+
+    [:octicons-arrow-right-24: Build the Blueprint](deep-integration-analytics-governance.md)
+
 - :material-ab-testing: __Reproducibility__
 
     ---
