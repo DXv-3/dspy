@@ -34,7 +34,7 @@ Welcome to DSPy tutorials! We've organized our tutorials into three main categor
     - [Output Refinement](/tutorials/output_refinement/best-of-n-and-refine/)
     - [Saving and Loading](/tutorials/saving/)
     - [Deployment](/tutorials/deployment/)
-    - [Debugging & Observability](/tutorials/observability/) — for a production-wide telemetry and governance reference, see the [Deep Integration Blueprint](/production/deep-integration-analytics-governance/)
+    - [Debugging & Observability](/tutorials/observability/) — for a production-wide telemetry, analytics, and governance reference, see the [Deep Integration Blueprint](/production/deep-integration-analytics-governance/).
     - [Streaming](/tutorials/streaming/)
     - [Async](/tutorials/async/)
 

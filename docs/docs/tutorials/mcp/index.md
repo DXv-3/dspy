@@ -443,7 +443,8 @@ Prediction(
 
 The `trajectory` field contains the entire thinking and acting process. If you're curious about what's happening
 under the hood, check out the [Observability Guide](https://dspy.ai/tutorials/observability/) to set up MLflow,
-which visualizes every step happening inside `dspy.ReAct`!
+which visualizes every step happening inside `dspy.ReAct`! For production telemetry, analytics, and governance
+rollouts, follow the [Deep Integration Blueprint](/production/deep-integration-analytics-governance/).
 
 
 ## Conclusion

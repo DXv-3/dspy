@@ -2,7 +2,8 @@
 
 This guide demonstrates how to debug problems and improve observability in DSPy. Modern AI programs often involve multiple components, such as language models, retrievers, and tools. DSPy allows you to build and optimize such complex AI systems in a clean and modular way.
 
-> Looking for a production-wide architecture that blends telemetry, analytics, and governance? Explore the [Deep Integration, Analytics, and Governance Blueprint](../../production/deep-integration-analytics-governance.md) for deployment-ready patterns.
+!!! info "Need an end-to-end production blueprint?"
+    Looking for a production-wide architecture that blends telemetry, analytics, and governance? Explore the [Deep Integration, Analytics, and Governance Blueprint](../../production/deep-integration-analytics-governance.md) for deployment-ready patterns.
 
 However, as systems grow more sophisticated, the ability to **understand what your system is doing** becomes critical. Without transparency, the prediction process can easily become a black box, making failures or quality issues difficult to diagnose and production maintenance challenging.
 
