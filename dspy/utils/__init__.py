@@ -5,6 +5,12 @@ import requests
 from dspy.streaming.messages import StatusMessage, StatusMessageProvider
 from dspy.utils import exceptions
 from dspy.utils.callback import BaseCallback, with_callbacks
+from dspy.utils.data_cleaning import (
+    DEFAULT_FILLER_PATTERNS,
+    clean_template,
+    remove_filler_lines,
+    replace_placeholders,
+)
 from dspy.utils.dummies import DummyLM, DummyVectorizer, dummy_rm
 
 
@@ -30,4 +36,8 @@ __all__ = [
     "dummy_rm",
     "StatusMessage",
     "StatusMessageProvider",
+    "remove_filler_lines",
+    "replace_placeholders",
+    "clean_template",
+    "DEFAULT_FILLER_PATTERNS",
 ]

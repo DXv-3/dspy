@@ -54,7 +54,16 @@ nav:
             - Debugging & Observability: tutorials/observability/index.md
             - Streaming: tutorials/streaming/index.md
             - Async: tutorials/async/index.md
-    - DSPy in Production: production/index.md
+    - DSPy in Production:
+        - Production Overview: production/index.md
+        - Universal Agentic Ecosystem: production/agentic-ecosystem.md
+        - Agent Skills, Automation, and Interactions: production/agent-skills-automation.md
+        - Technical Stack & Modular Build Plan: production/technical-stack-modular-build.md
+        - Event Pipeline & Real-Time Actions: production/event-pipeline-real-time-actions.md
+        - Deep Integration, Analytics, and Governance: production/deep-integration-analytics-governance.md
+        - Adaptive Feedback, Reinforcement, and RAG: production/adaptive-feedback-rag.md
+        - Monetization, Commerce, and SaaS Channels: production/monetization-commerce-saas.md
+        - Comprehensive Test Coverage and Continuous Integration: production/test-coverage-ci.md
     - Community:
         - Community Resources: community/community-resources.md
         - Use Cases: community/use-cases.md
