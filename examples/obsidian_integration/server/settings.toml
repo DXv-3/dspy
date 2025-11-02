@@ -1,0 +1,15 @@
+[llm]
+provider = "openai/gpt-4o-mini"
+temperature = 0.2
+
+[memories]
+namespace = "obsidian"
+
+[opensearch]
+host = "http://localhost:9200"
+index = "obsidian-notes"
+verify_certs = true
+
+[app]
+allow_cross_origin = true
+# api_key = "set-me-if-you-want-to-require-bearer-tokens"

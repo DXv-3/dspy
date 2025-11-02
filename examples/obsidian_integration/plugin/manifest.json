@@ -1,0 +1,10 @@
+{
+  "id": "dspy-obsidian",
+  "name": "DSPy Connector",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Send Obsidian notes to a DSPy backend with mem0, supermemory, and OpenSearch integration.",
+  "author": "DSPy Team",
+  "authorUrl": "https://github.com/stanfordnlp/dspy",
+  "isDesktopOnly": false
+}
