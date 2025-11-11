@@ -155,6 +155,52 @@
       line-height: 1.4;
     }
 
+    .${NS}-section label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      color: rgba(241, 243, 244, 0.75);
+    }
+
+    .${NS}-section input[type="text"],
+    .${NS}-section input[type="url"],
+    .${NS}-section input[type="password"] {
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.35);
+      color: #e8eaed;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .${NS}-section input[type="text"]:focus,
+    .${NS}-section input[type="url"]:focus,
+    .${NS}-section input[type="password"]:focus {
+      outline: 2px solid rgba(138, 180, 248, 0.6);
+    }
+
+    .${NS}-switch {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: rgba(241, 243, 244, 0.75);
+    }
+
+    .${NS}-switch input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #8ab4f8;
+    }
+
+    .${NS}-status {
+      font-size: 11px;
+      color: rgba(241, 243, 244, 0.6);
+    }
+
     .${NS}-steps textarea {
       width: 100%;
       min-height: 120px;
@@ -216,6 +262,27 @@
           <button data-action="copy-xpath" disabled>Copy XPath</button>
         </div>
       </div>
+      <div class="${NS}-section ${NS}-integrations">
+        <h2>Backend Sync</h2>
+        <label class="${NS}-switch">
+          <input type="checkbox" data-field="backend-enabled" />
+          <span>Enable API sync</span>
+        </label>
+        <label>
+          Endpoint URL
+          <input type="url" placeholder="https://localhost:8000/events" data-field="backend-endpoint" />
+        </label>
+        <label>
+          API key (optional)
+          <input type="password" placeholder="Bearer token" data-field="backend-api-key" />
+        </label>
+        <label class="${NS}-switch">
+          <input type="checkbox" data-field="backend-auto" />
+          <span>Auto-send when adding a step</span>
+        </label>
+        <button data-action="send-backend" disabled>Send current selection</button>
+        <div class="${NS}-status ${NS}-backend-status">Sync disabled.</div>
+      </div>
       <div class="${NS}-section ${NS}-steps">
         <h2>Script Builder</h2>
         <textarea placeholder="// Steps you want your Tampermonkey script to run\n// Click ‘Add Step’ to insert template code for the current element." data-field="steps"></textarea>
@@ -233,11 +300,17 @@
     clear: panel.querySelector('[data-action="clear"]'),
     copyCss: panel.querySelector('[data-action="copy-css"]'),
     copyXpath: panel.querySelector('[data-action="copy-xpath"]'),
-    addStep: panel.querySelector('[data-action="add-step"]')
+    addStep: panel.querySelector('[data-action="add-step"]'),
+    sendBackend: panel.querySelector('[data-action="send-backend"]')
   };
   const fields = {
     css: panel.querySelector('[data-field="css"]'),
-    steps: panel.querySelector('[data-field="steps"]')
+    steps: panel.querySelector('[data-field="steps"]'),
+    backendEnabled: panel.querySelector('[data-field="backend-enabled"]'),
+    backendEndpoint: panel.querySelector('[data-field="backend-endpoint"]'),
+    backendApiKey: panel.querySelector('[data-field="backend-api-key"]'),
+    backendAuto: panel.querySelector('[data-field="backend-auto"]'),
+    backendStatus: panel.querySelector(`.${NS}-backend-status`)
   };
 
   const state = {
@@ -245,6 +318,103 @@
     highlighted: null,
     selected: null
   };
+
+  const storageKey = `${NS}-config`;
+  const defaultConfig = {
+    backend: {
+      enabled: false,
+      endpoint: '',
+      apiKey: '',
+      autoSend: false,
+      lastSynced: null,
+      lastError: null
+    }
+  };
+
+  function loadConfig() {
+    const globalConfig = window.TampermonkeyInspectorConfig || {};
+    let persisted = {};
+    try {
+      persisted = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    } catch (error) {
+      console.warn('[Tampermonkey Inspector] Failed to parse stored config', error);
+    }
+    return {
+      backend: {
+        ...defaultConfig.backend,
+        ...(globalConfig.backend || {}),
+        ...(persisted.backend || {})
+      }
+    };
+  }
+
+  let config = loadConfig();
+
+  function persistConfig() {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(config));
+    } catch (error) {
+      console.warn('[Tampermonkey Inspector] Failed to persist config', error);
+    }
+  }
+
+  function formatTime(dateString) {
+    if (!dateString) return null;
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString();
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function updateBackendStatus(message) {
+    if (!fields.backendStatus) return;
+    fields.backendStatus.textContent = message;
+  }
+
+  function refreshBackendUI() {
+    if (!fields.backendEnabled) {
+      return;
+    }
+    const backend = config.backend;
+    fields.backendEnabled.checked = !!backend.enabled;
+    if (fields.backendEndpoint) {
+      fields.backendEndpoint.value = backend.endpoint || '';
+    }
+    if (fields.backendApiKey) {
+      fields.backendApiKey.value = backend.apiKey || '';
+    }
+    if (fields.backendAuto) {
+      fields.backendAuto.checked = !!backend.autoSend;
+    }
+    const disabled = !backend.enabled;
+    if (fields.backendEndpoint) {
+      fields.backendEndpoint.disabled = disabled;
+    }
+    if (fields.backendApiKey) {
+      fields.backendApiKey.disabled = disabled;
+    }
+    if (fields.backendAuto) {
+      fields.backendAuto.disabled = disabled;
+    }
+    if (controls.sendBackend) {
+      controls.sendBackend.disabled = disabled;
+    }
+
+    if (!backend.enabled) {
+      updateBackendStatus('Sync disabled.');
+    } else if (backend.lastError) {
+      updateBackendStatus(`Last error: ${backend.lastError}`);
+    } else if (backend.lastSynced) {
+      const formatted = formatTime(backend.lastSynced);
+      updateBackendStatus(formatted ? `Last synced at ${formatted}` : 'Sync ready.');
+    } else {
+      updateBackendStatus('Sync ready. Select an element to send it to the API.');
+    }
+
+    updateSendButtonState();
+  }
 
   function highlight(element) {
     if (!element || element === document.body || element === document.documentElement) {
@@ -262,6 +432,28 @@
     state.highlighted = element;
   }
 
+  function describeElement(element) {
+    if (!element) return null;
+    const tag = element.tagName.toLowerCase();
+    const id = element.id || null;
+    const classes = [...element.classList];
+    const attributes = [...element.attributes]
+      .filter(attr => !['style'].includes(attr.name))
+      .reduce((acc, attr) => {
+        acc[attr.name] = attr.value;
+        return acc;
+      }, {});
+    const text = element.innerText ? element.innerText.trim() : '';
+    return {
+      tag,
+      id,
+      classes,
+      attributes,
+      textPreview: text.slice(0, 240),
+      textLength: text.length
+    };
+  }
+
   function summarize(element) {
     if (!element) {
       infoBox.textContent = 'Select an element to inspect its details.';
@@ -269,21 +461,19 @@
       return;
     }
 
+    const summary = describeElement(element);
     infoBox.classList.remove(`${NS}-empty`);
-    const tag = element.tagName.toLowerCase();
-    const id = element.id ? `#${element.id}` : '';
-    const classList = [...element.classList].map(cls => `.${cls}`).join('');
-    const textContent = element.innerText ? element.innerText.trim().slice(0, 140) : '';
-
-    const attributes = [...element.attributes]
-      .filter(attr => !['id', 'class', 'style'].includes(attr.name))
-      .map(attr => `${attr.name}="${attr.value}"`)
+    const selectorLabel = `${summary.tag}${summary.id ? `#${summary.id}` : ''}${summary.classes.map(cls => `.${cls}`).join('')}`;
+    const attrContent = Object.entries(summary.attributes)
+      .filter(([name]) => !['id', 'class'].includes(name))
+      .map(([name, value]) => `${name}="${value}"`)
       .join(' ');
+    const preview = summary.textPreview;
 
     infoBox.innerHTML = `
-      <div><strong>Element</strong>: <code>${tag}${id}${classList}</code></div>
-      ${attributes ? `<div><strong>Attributes</strong>: <code>${attributes}</code></div>` : ''}
-      ${textContent ? `<div><strong>Preview</strong>: ${textContent}${element.innerText.trim().length > 140 ? '…' : ''}</div>` : ''}
+      <div><strong>Element</strong>: <code>${selectorLabel}</code></div>
+      ${attrContent ? `<div><strong>Attributes</strong>: <code>${attrContent}</code></div>` : ''}
+      ${preview ? `<div><strong>Preview</strong>: ${preview}${summary.textLength > preview.length ? '…' : ''}</div>` : ''}
     `;
   }
 
@@ -345,6 +535,7 @@
       controls.copyCss.disabled = true;
       controls.copyXpath.disabled = true;
       controls.addStep.disabled = true;
+      updateSendButtonState();
       return;
     }
     const css = cssPath(element);
@@ -353,8 +544,103 @@
     controls.copyCss.disabled = !css;
     controls.copyXpath.disabled = !xp;
     controls.addStep.disabled = false;
+    updateSendButtonState();
     controls.copyCss.dataset.value = css;
     controls.copyXpath.dataset.value = xp;
+  }
+
+  function updateSendButtonState() {
+    if (!controls.sendBackend) return;
+    controls.sendBackend.disabled = !(config.backend.enabled && state.selected);
+  }
+
+  function buildSnippet(element, css) {
+    if (!element) return '';
+    const safeCss = (css || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return `// ${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}` +
+      `\nconst target = document.querySelector('${safeCss}');` +
+      `\n// TODO: interact with target (e.g. target.click())\n`;
+  }
+
+  function currentSelectionSnapshot(extra = {}) {
+    if (!state.selected) return null;
+    const css = controls.copyCss.dataset.value || cssPath(state.selected);
+    const xp = controls.copyXpath.dataset.value || xpath(state.selected);
+    const elementSummary = describeElement(state.selected);
+    return {
+      url: window.location.href,
+      title: document.title,
+      timestamp: new Date().toISOString(),
+      selectors: {
+        css,
+        xpath: xp
+      },
+      element: elementSummary,
+      notes: fields.steps.value,
+      ...extra
+    };
+  }
+
+  async function sendSelectionToBackend(options = {}) {
+    const backend = config.backend;
+    if (!backend.enabled) {
+      toast('Enable backend sync to send selections.');
+      return;
+    }
+    if (!backend.endpoint) {
+      updateBackendStatus('Add an endpoint URL to sync selections.');
+      toast('Add an endpoint URL first.');
+      return;
+    }
+    if (!state.selected) {
+      toast('Select an element before syncing.');
+      return;
+    }
+
+    const snapshot = currentSelectionSnapshot({
+      trigger: options.trigger || 'manual',
+      snippet: options.snippet || buildSnippet(state.selected, controls.copyCss.dataset.value || cssPath(state.selected))
+    });
+    if (!snapshot) {
+      toast('Unable to capture the current selection.');
+      return;
+    }
+
+    updateBackendStatus('Syncing…');
+    if (controls.sendBackend) {
+      controls.sendBackend.disabled = true;
+    }
+
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (backend.apiKey) {
+      headers.Authorization = `Bearer ${backend.apiKey}`;
+    }
+
+    try {
+      const response = await fetch(backend.endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(snapshot)
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      config.backend.lastSynced = snapshot.timestamp;
+      config.backend.lastError = null;
+      persistConfig();
+      refreshBackendUI();
+      toast('Selection synced to backend.');
+    } catch (error) {
+      console.error('[Tampermonkey Inspector] Failed to sync selection', error);
+      config.backend.lastError = error.message || 'Unknown error';
+      persistConfig();
+      refreshBackendUI();
+      toast(`Backend sync failed: ${config.backend.lastError}`);
+    } finally {
+      updateSendButtonState();
+    }
   }
 
   function select(element) {
@@ -364,6 +650,7 @@
     controls.lock.disabled = true;
     controls.clear.disabled = false;
     state.mode = 'locked';
+    updateSendButtonState();
   }
 
   function clearSelection() {
@@ -378,6 +665,7 @@
     controls.addStep.disabled = true;
     controls.clear.disabled = true;
     controls.lock.disabled = true;
+    updateSendButtonState();
   }
 
   function startSelection() {
@@ -458,12 +746,12 @@
   function addStep() {
     if (!state.selected) return;
     const css = controls.copyCss.dataset.value || cssPath(state.selected);
-    const safeCss = css.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    const snippet = `// ${state.selected.tagName.toLowerCase()}${state.selected.id ? `#${state.selected.id}` : ''}
-const target = document.querySelector('${safeCss}');
-// TODO: interact with target (e.g. target.click())\n`;
+    const snippet = buildSnippet(state.selected, css);
     fields.steps.value += (fields.steps.value.endsWith('\n') || fields.steps.value === '' ? '' : '\n') + snippet + '\n';
     toast('Template inserted into notes.');
+    if (config.backend.enabled && config.backend.autoSend) {
+      sendSelectionToBackend({ trigger: 'auto-add-step', snippet });
+    }
   }
 
   function enableDrag(handle, element) {
@@ -530,6 +818,45 @@ const target = document.querySelector('${safeCss}');
     addStep();
   });
 
+  if (controls.sendBackend) {
+    controls.sendBackend.addEventListener('click', () => {
+      sendSelectionToBackend({ trigger: 'manual' });
+    });
+  }
+
+  if (fields.backendEnabled) {
+    fields.backendEnabled.addEventListener('change', () => {
+      config.backend.enabled = fields.backendEnabled.checked;
+      if (!config.backend.enabled) {
+        config.backend.lastError = null;
+      }
+      persistConfig();
+      refreshBackendUI();
+    });
+  }
+
+  if (fields.backendEndpoint) {
+    fields.backendEndpoint.addEventListener('input', (event) => {
+      config.backend.endpoint = event.target.value.trim();
+      persistConfig();
+      refreshBackendUI();
+    });
+  }
+
+  if (fields.backendApiKey) {
+    fields.backendApiKey.addEventListener('input', (event) => {
+      config.backend.apiKey = event.target.value.trim();
+      persistConfig();
+    });
+  }
+
+  if (fields.backendAuto) {
+    fields.backendAuto.addEventListener('change', () => {
+      config.backend.autoSend = fields.backendAuto.checked;
+      persistConfig();
+    });
+  }
+
   document.addEventListener('mousemove', handleMouseMove, true);
   document.addEventListener('click', handleClick, true);
   document.addEventListener('keydown', (event) => {
@@ -543,5 +870,6 @@ const target = document.querySelector('${safeCss}');
     }
   }, true);
 
+  refreshBackendUI();
   clearSelection();
 })();

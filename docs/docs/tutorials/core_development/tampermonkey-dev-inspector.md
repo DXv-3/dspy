@@ -72,3 +72,32 @@ The helper is intentionally small and self-contained. Feel free to:
 - Trigger other workflows (such as sending selectors to a REST endpoint) by adapting the copy handlers.
 
 The source lives in [`docs/docs/js/tampermonkey-inspector.js`](../../js/tampermonkey-inspector.js). Duplicate it into your own project or keep it as a shared asset inside your team wiki.
+
+## Syncing with a backend
+
+The helper now ships with an optional **Backend Sync** section so you can log selectors to an API or collaborative dashboard. Configure it in three steps:
+
+1. Define a global config before you load the helper (in Tampermonkey, place this above the helper source):
+
+   ```javascript
+   window.TampermonkeyInspectorConfig = {
+     backend: {
+       enabled: true,
+       endpoint: 'http://localhost:8000/events',
+       apiKey: 'dev-key',      // optional – removed if you disable auth
+       autoSend: true          // automatically POST when you click “Add Step”
+     }
+   };
+   ```
+
+2. Open the **Backend Sync** section inside the panel and adjust the endpoint or toggle auto-send. Settings are cached per origin in `localStorage` so you only need to configure them once.
+3. Use **Send current selection** to manually push the highlighted element to your API. Errors and timestamps surface inside the panel.
+
+### Full-stack sample
+
+A ready-to-run FastAPI backend plus lightweight dashboard live in `examples/tampermonkey_dev_inspector/` inside this repository:
+
+- `backend/app.py` accepts the JSON payloads produced by the helper and stores them in-memory.
+- `frontend/index.html` polls the backend and renders a timeline of captured selectors, generated snippets, and page metadata.
+
+Follow the quick-start instructions in that README to spin up the backend, connect the dashboard, and watch new selectors stream in as you explore pages with the inspector.
