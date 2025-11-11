@@ -55,6 +55,7 @@ nav:
             - Streaming: tutorials/streaming/index.md
             - Async: tutorials/async/index.md
             - Tampermonkey Dev Inspector: tutorials/core_development/tampermonkey-dev-inspector.md
+            - Tampermonkey Dev Inspector (Complete System): tutorials/core_development/tampermonkey-dev-inspector-complete.md
     - DSPy in Production: production/index.md
     - Community:
         - Community Resources: community/community-resources.md
