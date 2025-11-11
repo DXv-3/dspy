@@ -58,6 +58,7 @@ nav:
     - DSPy in Production: production/index.md
     - Community:
         - Community Resources: community/community-resources.md
+        - DSPy Ecosystem Repositories: community/dspy-ecosystem.md
         - Use Cases: community/use-cases.md
         - Roadmap: roadmap.md
         - Contributing: community/how-to-contribute.md
