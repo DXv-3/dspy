@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tampermonkey Inspector Dashboard</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #11151a;
+        color: #f5f7fa;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        max-width: 960px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      header {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .controls input[type="url"],
+      .controls input[type="password"] {
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(17, 21, 26, 0.85);
+        color: inherit;
+        min-width: 260px;
+      }
+
+      button {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 8px;
+        background: #4863f7;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 20px rgba(72, 99, 247, 0.3);
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      th, td {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        vertical-align: top;
+      }
+
+      th {
+        background: rgba(255, 255, 255, 0.05);
+        text-align: left;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      tbody tr:nth-child(even) {
+        background: rgba(17, 21, 26, 0.8);
+      }
+
+      code {
+        font-family: "JetBrains Mono", "Fira Code", "SFMono-Regular", monospace;
+        font-size: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 4px 6px;
+        border-radius: 6px;
+      }
+
+      pre {
+        background: rgba(0, 0, 0, 0.6);
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+
+      .empty {
+        font-style: italic;
+        opacity: 0.7;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Tampermonkey Inspector Feed</h1>
+      <p>Live dashboard that displays selectors captured by the Tampermonkey Inspector helper.</p>
+      <div class="controls">
+        <input id="endpoint" type="url" placeholder="http://localhost:8000/events" />
+        <input id="apiKey" type="password" placeholder="Optional API key" />
+        <button id="connect">Connect</button>
+        <span id="status" class="empty">Not connected.</span>
+      </div>
+    </header>
+    <main>
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Page</th>
+            <th>Selectors</th>
+            <th>Snippet</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr><td colspan="4" class="empty">No events yet.</td></tr>
+        </tbody>
+      </table>
+    </main>
+    <script>
+      const endpointInput = document.getElementById('endpoint');
+      const apiKeyInput = document.getElementById('apiKey');
+      const connectButton = document.getElementById('connect');
+      const statusEl = document.getElementById('status');
+      const rowsEl = document.getElementById('rows');
+      let timer = null;
+      let endpoint = '';
+
+      function setStatus(message, isError = false) {
+        statusEl.textContent = message;
+        statusEl.style.color = isError ? '#ff867c' : 'inherit';
+      }
+
+      function renderEvents(events) {
+        rowsEl.innerHTML = '';
+        if (!events.length) {
+          rowsEl.innerHTML = '<tr><td colspan="4" class="empty">No events yet.</td></tr>';
+          return;
+        }
+        for (const event of events) {
+          const row = document.createElement('tr');
+          const time = new Date(event.timestamp);
+          row.innerHTML = `
+            <td>${time.toLocaleString()}</td>
+            <td>
+              <div><strong>${event.title || 'Untitled page'}</strong></div>
+              <div><a href="${event.url}" target="_blank" rel="noopener">${event.url}</a></div>
+              <div>Trigger: <code>${event.trigger}</code></div>
+            </td>
+            <td>
+              <div>CSS: <code>${event.selectors.css}</code></div>
+              <div>XPath: <code>${event.selectors.xpath}</code></div>
+            </td>
+            <td>
+              ${event.snippet ? `<pre>${event.snippet.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</pre>` : '<span class="empty">No snippet</span>'}
+            </td>
+          `;
+          rowsEl.appendChild(row);
+        }
+      }
+
+      async function fetchEvents() {
+        if (!endpoint) return;
+        try {
+          const headers = {};
+          if (apiKeyInput.value) {
+            headers['Authorization'] = `Bearer ${apiKeyInput.value}`;
+          }
+          const response = await fetch(endpoint, { headers });
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          const data = await response.json();
+          renderEvents(data);
+          setStatus(`Connected – updated ${new Date().toLocaleTimeString()}`);
+        } catch (error) {
+          console.error(error);
+          setStatus(`Failed to fetch events: ${error.message}`, true);
+        }
+      }
+
+      connectButton.addEventListener('click', () => {
+        const value = endpointInput.value.trim();
+        if (!value) {
+          setStatus('Enter an endpoint URL first.', true);
+          return;
+        }
+        endpoint = value;
+        setStatus('Connecting…');
+        fetchEvents();
+        if (timer) {
+          clearInterval(timer);
+        }
+        timer = setInterval(fetchEvents, 5000);
+      });
+    </script>
+  </body>
+</html>
