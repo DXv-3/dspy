@@ -1,0 +1,60 @@
+{
+  "name": "mcp-continual-policy",
+  "version": "1.1.0",
+  "description": "Continual system prompt learning with enforced contracts + routing.",
+  "tools": [
+    {
+      "name": "route_and_respond",
+      "description": "Classify request -> select contract -> generate validated response.",
+      "input_schema": {
+        "type": "object",
+        "required": ["user_query"],
+        "properties": {
+          "user_query": { "type": "string" },
+          "context": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "respond_go_mode",
+      "description": "Generate a GO MODE compliant response (contract enforced).",
+      "input_schema": {
+        "type": "object",
+        "required": ["user_query", "context"],
+        "properties": {
+          "user_query": { "type": "string" },
+          "context": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "solve_and_learn",
+      "description": "Run coding loop: solve -> test -> judge -> propose rules -> validate -> commit policy.",
+      "input_schema": {
+        "type": "object",
+        "required": ["problem", "repo_path", "reference_solution"],
+        "properties": {
+          "problem": { "type": "string" },
+          "repo_path": { "type": "string" },
+          "reference_solution": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "get_policy_latest",
+      "description": "Return the current active learned policy text.",
+      "input_schema": { "type": "object", "properties": {} }
+    },
+    {
+      "name": "rollback_policy",
+      "description": "Rollback active policy to a previous version index.",
+      "input_schema": {
+        "type": "object",
+        "required": ["version_index"],
+        "properties": {
+          "version_index": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  ]
+}
