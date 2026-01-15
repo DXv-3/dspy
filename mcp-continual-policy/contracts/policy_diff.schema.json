@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "required": ["rules"],
+  "properties": {
+    "rules": { "type": "string" },
+    "rationale": { "type": "string" }
+  }
+}

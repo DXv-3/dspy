@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "required": [
+    "direct_answer",
+    "key_points",
+    "explanation",
+    "likely_follow_ups",
+    "next_actions"
+  ],
+  "properties": {
+    "direct_answer": { "type": "string", "maxLength": 500 },
+    "key_points": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "type": "string" }
+    },
+    "explanation": { "type": "string" },
+    "likely_follow_ups": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["question", "short_answer"],
+        "properties": {
+          "question": { "type": "string" },
+          "short_answer": { "type": "string" }
+        }
+      }
+    },
+    "next_actions": { "type": "array", "items": { "type": "string" } }
+  }
+}
