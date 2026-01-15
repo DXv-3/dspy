@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+dspy-ai
+mem0
+supermemory
+opensearch-py
+python-dotenv
+PyYAML

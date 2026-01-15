@@ -1,0 +1,14 @@
+.dspy-panel {
+  padding: 12px;
+  font-family: var(--font-interface);
+}
+
+.dspy-panel textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+}
+
+.dspy-panel button {
+  margin-top: 8px;
+}
